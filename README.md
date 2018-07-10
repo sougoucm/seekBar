@@ -4,4 +4,4 @@
 版本一
 ![image](https://github.com/sougoucm/seekBar/blob/master/seekBar_v2.gif)
 升级版本
-![image](https://github.com/sougoucm/seekBar/blob/master/seekBar_v3.gif)
+![image](https://github.com/sougoucm/seekBar/blob/master/seekbar_v3.gif)
