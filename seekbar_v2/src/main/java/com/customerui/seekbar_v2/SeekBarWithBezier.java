@@ -1,6 +1,8 @@
 package com.customerui.seekbar_v2;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
@@ -9,6 +11,7 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -19,7 +22,12 @@ import android.view.View;
 
 public class SeekBarWithBezier extends View {
     private final static String TAG = SeekBarWithBezier.class.getSimpleName();
-    //假设 控件高度为115,可以求得弧度的：开始点、结束点的坐标和控制点的坐标
+    private Bitmap my_bg = BitmapFactory.decodeResource(this.getContext().getResources(), R.drawable.libui_seekbar_my2);//我的 背景
+    private Bitmap rec_bg = BitmapFactory.decodeResource(this.getContext().getResources(), R.drawable.libui_seekbar_rec2);//推荐 背景
+    private int my_index = 0;//我的 位置
+    private int rec_index =0;//推荐 位置
+    private String myText = "我的";
+    private String recText= "推荐";
     private int bgColor = Color.WHITE;//控件背景色
     private int viewHight = 200;//控件的高度
     private int rSliderBlock = 40;//圆形滑块半径
@@ -40,6 +48,7 @@ public class SeekBarWithBezier extends View {
     private Paint paintScaleNum = new Paint();//刻度数字
     private Paint paintScale = new Paint();//刻度
     private Paint paintMsg = new Paint();//底部中间，风险指数的画笔
+    private Paint paintMyRec = new Paint();//我的 和 推荐
 
     public SeekBarWithBezier(Context context) {
         this(context, null);
@@ -47,8 +56,17 @@ public class SeekBarWithBezier extends View {
 
     public SeekBarWithBezier(Context context, AttributeSet attrs) {
         super(context, attrs);
+        setMy_index(1);
+        setRec_index(5);
     }
 
+    public void setMy_index(int my_index) {
+        this.my_index = my_index;
+    }
+
+    public void setRec_index(int rec_index) {
+        this.rec_index = rec_index;
+    }
 
     @Override
     protected void onDraw(Canvas canvas) {
@@ -67,19 +85,64 @@ public class SeekBarWithBezier extends View {
         //绘制底部文字
         drawBottomMsg(canvas);
         //绘制"我的"和“推荐”
+        drawMyAndRec(canvas);
+    }
+
+    private void drawMyAndRec(Canvas canvas) {
+        paintMyRec.setAntiAlias(true);
+        paintMyRec.setColor(Color.parseColor("#ffffff"));
+        paintMyRec.setTextSize(gaoDiSize-5);
+        paintMyRec.setStyle(Paint.Style.FILL);
+        float[] postions = getDistance();
+        float rec_stop_y = getHeight() * 0.3f - rec_bg.getHeight() / 2;//最小值
+        if (rec_index != 0) {
+            int rec_index_px = changeValue(rec_index) * preIndexPx;
+            float rec_start_x = rec_index_px - rec_bg.getWidth() / 2;
+            if (tmpIndex == rec_index) { //等于当前选中的位置
+                canvas.drawBitmap(rec_bg, rec_start_x, postions[4], paintMyRec);
+                canvas.drawText(recText, rec_start_x + my_bg.getWidth() * 0.32f, postions[4] + my_bg.getHeight() * 0.58f, paintMyRec);
+            }else if (getNextValue() == rec_index) {//下一个
+                canvas.drawBitmap(rec_bg, rec_start_x, postions[5], paintMyRec);
+                canvas.drawText(recText, rec_start_x + my_bg.getWidth() * 0.32f, postions[5] + my_bg.getHeight() * 0.58f, paintMyRec);
+            }else{
+                canvas.drawBitmap(rec_bg, rec_start_x, rec_stop_y, paintMyRec);
+                canvas.drawText(recText, rec_start_x + my_bg.getWidth() * 0.32f, rec_stop_y + my_bg.getHeight() * 0.58f, paintMyRec);
+            }
+        }
+
+        if (my_index != 0) {
+            int my_index_px = changeValue(my_index) * preIndexPx;
+            float my_start_x = my_index_px - my_bg.getWidth() / 2;
+
+            if (tmpIndex == my_index) { //等于当前选中的位置
+                canvas.drawBitmap(my_bg, my_start_x, postions[4], paintMyRec);
+                canvas.drawText(myText, my_start_x + my_bg.getWidth() * 0.32f, postions[4] + my_bg.getHeight() * 0.58f, paintMyRec);
+            }else if (getNextValue() == my_index) {//下一个
+                canvas.drawBitmap(my_bg, my_start_x, postions[5], paintMyRec);
+                canvas.drawText(myText, my_start_x + my_bg.getWidth() * 0.32f, postions[5] + my_bg.getHeight() * 0.58f, paintMyRec);
+            }else{
+                canvas.drawBitmap(my_bg, my_start_x,rec_stop_y, paintMyRec);
+                canvas.drawText(myText, my_start_x + my_bg.getWidth() * 0.32f, rec_stop_y + my_bg.getHeight() * 0.58f, paintMyRec);
+            }
+
+        }
     }
 
     private void drawBottomMsg(Canvas canvas) {
         //绘制“低”“高”
-        paint.setTextSize(gaoDiSize);
-        paint.setStrokeWidth(1);
-        canvas.drawText("低", preIndexPx - gaoDiSize * 0.5f, viewHight * 0.5f + rSliderBlock * 2, paint);
-        canvas.drawText("高", getWidth() - preIndexPx - gaoDiSize * 0.5f, viewHight * 0.5f + rSliderBlock * 2, paint);
-        paint.setStrokeWidth(lineWidth);
+        paintMyRec.setAntiAlias(true);
+        paintMyRec.setTextSize(gaoDiSize);
+        paintMyRec.setStyle(Paint.Style.FILL);
 
+        paintMyRec.setColor(Color.parseColor("#2ad8bb"));
+        canvas.drawText("低", preIndexPx - gaoDiSize * 0.5f, viewHight * 0.5f + rSliderBlock * 2, paintMyRec);
+        paintMyRec.setColor(Color.parseColor("#6080dd"));
+        canvas.drawText("高", getWidth() - preIndexPx - gaoDiSize * 0.5f, viewHight * 0.5f + rSliderBlock * 2, paintMyRec);
+
+
+        paintMsg.setAntiAlias(true);
+        paintMsg.setColor(Color.parseColor("#999999"));
         paintMsg.setStyle(Paint.Style.FILL);
-        paintMsg.setColor(Color.BLACK);
-        paintMsg.setStrokeWidth(2);
         paintMsg.setTextSize(zhiShuSize);
         //绘制风险指数
         String msg = "风险指数";
@@ -144,19 +207,18 @@ public class SeekBarWithBezier extends View {
         paintScaleNum.setColor(Color.BLACK);
         paintScaleNum.setStrokeWidth(2);
         paintScaleNum.setTextSize(dengSize);
+
         for (float f = 0; f <= getWidth(); f = f + getWidth() / 18.0f) {
             if (count % 2 == 1) {
-                if (index == countTxt) {//等于当前选中的位置
+                float[] postions = getDistance();
+                if (tmpIndex == countTxt) { //等于当前选中的位置
                     //不论是否滑动都可以用偏移量比例计算刻度的高度
-                    float[] postions = getDistance();
-                    paintScaleNum.setTextSize(dengSize * 2);
-                    if (index != tmpIndex) {//滑动超过preIndexPx的距离时，index的值变化为下一个，postions取值从[0]变化为[1]，表示由随距离下降的高度，变化为随距离上升的高度
-                        canvas.drawLine(f, postions[1] - 8 - preIndexPx * 0.5f, f, postions[1] - preIndexPx * 0.5f, paintScale);
-                        canvas.drawText(countTxt + "", f - dengSize / 2, postions[1] - dengSize * 1.6f, paintScaleNum);// dengSize*1.6f的含义是， 偏移量
-                    } else {
-                        canvas.drawLine(f, postions[0] - 8 - preIndexPx * 0.5f, f, postions[0] - preIndexPx * 0.5f, paintScale);
-                        canvas.drawText(countTxt + "", f - dengSize / 2, postions[0] - dengSize * 1.6f, paintScaleNum);
-                    }
+//                    paintScaleNum.setTextSize(dengSize * 2);
+
+                    canvas.drawLine(f, postions[0] - 8 - preIndexPx * 0.5f, f, postions[0] - preIndexPx * 0.5f, paintScale);
+                    paintScaleNum.setTextSize(postions[2]);
+                    canvas.drawText(countTxt + "", f -  postions[2]*0.3f, postions[0] - dengSize * 1.6f, paintScaleNum);// dengSize*1.6f的含义是， 偏移量
+
                     paintScaleNum.setTextSize(dengSize);
 
                     //绘制覆盖线
@@ -169,14 +231,46 @@ public class SeekBarWithBezier extends View {
                     } else {
                         canvas.drawLine(changeValue(index - 1) * preIndexPx, viewHight * 0.5f, changeValue(index + 1) * preIndexPx, viewHight * 0.5f, paintCover);
                     }
-                } else {
+                } else if (getNextValue() == countTxt) {//下一个,可能是 向左移动 下一个就是-1，也可能是向右移动 下一个就是+1
+                    canvas.drawLine(f, postions[1] - 8 - preIndexPx * 0.5f, f, postions[1] - preIndexPx * 0.5f, paintScale);
+                    paintScaleNum.setTextSize(postions[3]);
+                    canvas.drawText(countTxt + "", f - postions[3]*0.3f, postions[1] - dengSize * 1.6f, paintScaleNum);
+                    paintScaleNum.setTextSize(dengSize);
+
+                    //绘制覆盖线
+                    paintCover.setAntiAlias(true);
+                    paintCover.setStyle(Paint.Style.FILL);
+                    paintCover.setColor(bgColor);
+                    paintCover.setStrokeWidth(lineWidth * 1.5f);
+                    if (isMoving) {//移动中，使用滑动的X坐标进行计算
+                        canvas.drawLine(drawX - 2 * preIndexPx, viewHight * 0.5f, drawX + 2 * preIndexPx, viewHight * 0.5f, paintCover);
+                    } else {
+                        canvas.drawLine(changeValue(index - 1) * preIndexPx, viewHight * 0.5f, changeValue(index + 1) * preIndexPx, viewHight * 0.5f, paintCover);
+                    }
+                } else {//其他位置
+
                     canvas.drawLine(f, viewHight * 0.5f - 9 - 8, f, viewHight * 0.5f - 9, paintScale);
                     canvas.drawText(countTxt + "", f - dengSize / 4, viewHight * 0.5f - 9 - 8 - 8 - 13, paintScaleNum);
+
                 }
                 countTxt++;
             }
             count++;
         }
+    }
+
+    /**
+     * 通过当前滑块的值，判断下一个的值
+     * @return
+     */
+    private int getNextValue() {
+        int retValue = tmpIndex;
+        if ((changeValue(tmpIndex) * preIndexPx - 2 * preIndexPx) <= drawX && drawX <= (changeValue(tmpIndex) * preIndexPx)) {
+            return retValue - 1;
+        } else if (drawX <= (changeValue(tmpIndex) * preIndexPx + 2 * preIndexPx) && drawX >= (changeValue(tmpIndex) * preIndexPx)) {
+            return retValue + 1;
+        }
+        return retValue;
     }
 
     /**
@@ -285,18 +379,11 @@ public class SeekBarWithBezier extends View {
      * 用偏移量比例计算刻度的高度
      * 将滑块的X的坐标值drawX,从index的位置增大到index+1的位置时的距离值的变化范围，
      * 映射成刻度线和数字的Y坐标，从viewHight * 0.5f到viewHight * 0.5f-preIndexPx 的变化
-     * 具体描述：
-     * 滑动到index右侧一个2*preIndexPx距离内时,
-     * drawX变大，index位置的高度值变小，index+1位置的值变大。
-     * drawX变小，index位置的高度值变大，index+1位置的值变小
-     * 滑动在index左侧一个2*preIndexPx距离内时
-     * drawX变小，index位置的高度值变小，index-1位置的值变大
-     * drawX变大，index位置的高度值变大，index-1位置的值变小。
      *
      * @return float[] 0:index位置的高度变化（偏离index位置的绝对值变大则高度变小），1：index+1 或者index-1位置的高度变化（偏离index位置的绝对值变大则高度变大）
      */
     private float[] getDistance() {
-        float[] retValue = new float[]{viewHight * 0.5f, viewHight * 0.5f};
+        float[] retValue = new float[]{viewHight * 0.5f, viewHight * 0.5f, 0, 0, 0, 0};
         if (tmpIndex == 0) {//首次计算时
             tmpIndex = index;
         }
@@ -309,7 +396,14 @@ public class SeekBarWithBezier extends View {
         float b = Math.abs(drawX - changeValue(tmpIndex) * preIndexPx) / (preIndexPx * 2);//计算百分比
         retValue[0] = viewHight * 0.5f - preIndexPx + preIndexPx * b;//index位置的距离变化值
         retValue[1] = viewHight * 0.5f - preIndexPx * b;//index+1或者index-1位置的距离变化值
-//        Log.d(TAG, tmpIndex + "移动的结果：" + retValue[0] + "；" + retValue[1] + "；drawX：" + drawX + "；index和drawx的差值：" + Math.abs(drawX - changeValue(tmpIndex) * preIndexPx) + "；2格值：" + preIndexPx * 2 + "；百分比" + b + "；控件位置：" + viewHight * 0.5f);
+        retValue[2] = 2 * dengSize - dengSize * b;//index的数字大小
+        retValue[3] = dengSize + dengSize * b;//下一个 数字的大小
+        float rec_stop_y = getHeight() * 0.3f - rec_bg.getHeight() / 2;
+        float rec_start_y = getHeight() * 0.2f - rec_bg.getHeight() / 2;
+        float chaValue = rec_stop_y - rec_start_y;
+        retValue[4] =rec_start_y + chaValue * b;//index 我的
+        retValue[5] =  rec_stop_y - chaValue * b;//下一个 我的
+        Log.d(TAG, tmpIndex + "移动的结果：" + retValue[0] + "；" + retValue[1] + "；drawX：" + drawX + "；index和drawx的差值：" + Math.abs(drawX - changeValue(tmpIndex) * preIndexPx) + "；2格值：" + preIndexPx * 2 + "；百分比" + b + "；控件位置：" + viewHight * 0.5f);
         return retValue;
     }
 }
