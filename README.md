@@ -5,6 +5,6 @@
 
 ![image](https://github.com/sougoucm/seekBar/blob/master/seekBar_v2.gif)
 
-## 升级版本
+## 升级版本 版本二
 
 ![image](https://github.com/sougoucm/seekBar/blob/master/seekbar_v3.gif)
